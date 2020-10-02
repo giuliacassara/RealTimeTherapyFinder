@@ -16,7 +16,7 @@ SPACY_MODEL_NAMES = ["en_core_sci_lg"]
 NER_MODEL_NAMES = ["en_ner_bc5cdr_md"]
 
 DEFAULT_QUERY = "alkaptonuria treatment"
-DEFAULT_NUMBER_ARTICLES = 3
+DEFAULT_NUMBER_ARTICLES = 20
 DEFAULT_SAVE_PUBMED_ARTICLES = 'disease_results.csv'
 DEFAULT_TEXT = "Spinal and bulbar muscular atrophy (SBMA) is an inherited motor neuron disease caused by the expansion of a polyglutamine tract within the androgen receptor (AR). SBMA can be caused by this easily."
 HTML_WRAPPER = """<div style="overflow-x: auto; border: 1px solid #e6e9ef; border-radius: 0.25rem; padding: 1rem; margin-bottom: 2.5rem">{}</div>"""
@@ -76,7 +76,9 @@ def return_sentence_hightlight(tokens, searchterm):
 
 def render(df, index_article):
     #use index article to retrieve document information
-    df1 = df.iloc[index_article , [0, 1, 3, 9, 10] ]
+    #df1 = df.iloc[index_article , [0, 1, 3, 9, 10] ]
+    df1 = df.iloc[index_article , [0, 1, 2, 3, 4] ]
+
     text = str(df['abstract'][index_article])
     df1 = df1.to_frame().reset_index()
     dfStyler = df1.style.set_properties(**{'text-align': 'left'})
@@ -113,15 +115,17 @@ def render(df, index_article):
             if show_only_top:
                 break
 
-    attrs = ["text", "Definition"]
+    attrs = ["text", "Definition", "Paper"]
 
     #attrs = ["text", "Canonical Name", "Definition", "Concept ID"]
     df = pd.DataFrame(data, columns=attrs)
+    df = df.drop_duplicates()
+
     dfStyler = df.style.set_properties(**{'text-align': 'left'})
     dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
     st.table(dfStyler)
     
-    st.header("Therapy")
+    st.header("Therapy/Chemicals")
 
     ner_doc = process_text(ner_model, text)
 
@@ -137,15 +141,13 @@ def render(df, index_article):
             sentences = return_sentence_hightlight(tokens, searchterm)
             data.append([
                 ent.text,
-                kb_entity.canonical_name,
-                kb_entity.definition,
                 sentences
             ])
 
             if show_only_top:
                 break
     
-    attrs = ["text", "Canonical Name", "Definition", "Sentence matching"]
+    attrs = ["text", "Sentence matching", "Paper"]
     df = pd.DataFrame(data, columns=attrs)
     df = df.drop_duplicates()
     #st.dataframe(df)
@@ -154,34 +156,34 @@ def render(df, index_article):
     
     st.table(dfStyler)
 
-    st.header("Other")
+    #st.header("Other")
 
-    other_model = "en_core_sci_lg"
-    other_doc = process_text(other_model, text)
+    #other_model = "en_core_sci_lg"
+    #other_doc = process_text(other_model, text)
 
-    for ent in linker3(other_doc).ents:
-        for ent_id, score in ent._.kb_ents:
-            kb_entity = linker3.kb.cui_to_entity[ent_id]
+    #for ent in linker3(other_doc).ents:
+    #    for ent_id, score in ent._.kb_ents:
+    #        kb_entity = linker3.kb.cui_to_entity[ent_id]
             #--------------------------------------------#
                 #reference = search_term_in_text(ent.text, text)
-            data.append([
-                ent.text,
-                ent.label_,
-                kb_entity.canonical_name,
-                kb_entity.definition
-            ])
+    #        data.append([
+    #            ent.text,
+    #            ent.label_,
+    #            kb_entity.canonical_name,
+    #            kb_entity.definition
+    #        ])
     
-            if show_only_top:
-                break
+    #        if show_only_top:
+    #            break
 
-    attrs = ["text", "label_", "Canonical Name", "Definition"]
-    df = pd.DataFrame(data, columns=attrs)
-    df = df.drop_duplicates()
+    #attrs = ["text", "label_", "Canonical Name", "Definition"]
+    #df = pd.DataFrame(data, columns=attrs)
+    #df = df.drop_duplicates()
     #st.dataframe(df)
-    dfStyler = df.style.set_properties(**{'text-align': 'left'})
-    dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
+    #dfStyler = df.style.set_properties(**{'text-align': 'left'})
+    #dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
     
-    st.table(dfStyler)
+    #st.table(dfStyler)
 
 ##########################################################################################################
 
@@ -203,7 +205,7 @@ model_load_state.empty()
 
 linker1 = load_linker('hpo')
 linker2 = load_linker('rxnorm')
-linker3 = load_linker('umls')
+#linker3 = load_linker('umls')
 
 st.sidebar.header("Entity Linking")
 threshold = st.sidebar.slider("Mention Threshold", 0.0, 1.0, 0.95)

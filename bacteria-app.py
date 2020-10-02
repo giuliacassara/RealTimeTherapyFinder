@@ -17,7 +17,7 @@ import sys
 SPACY_MODEL_NAMES = ["en_core_sci_lg"]
 DEFAULT_QUERY = "Clostridium Autism"
 DEFAULT_TEXT = "insert your text here"
-DEFAULT_NUMBER_ARTICLES = 3
+DEFAULT_NUMBER_ARTICLES = 5
 DEFAULT_SAVE_PUBMED_ARTICLES = 'bacteria_results.csv'
 DEFAULT_TEXT = "Spinal and bulbar muscular atrophy (SBMA) is an inherited motor neuron disease caused by the expansion of a polyglutamine tract within the androgen receptor (AR). SBMA can be caused by this easily."
 HTML_WRAPPER = """<div style="overflow-x: auto; border: 1px solid #e6e9ef; border-radius: 0.25rem; padding: 1rem; margin-bottom: 2.5rem">{}</div>"""
