@@ -13,11 +13,14 @@ from taxadb.names import SciName
 from spacy.matcher import Matcher
 import re
 import sys
+import json
+import os
 
 SPACY_MODEL_NAMES = ["en_core_sci_lg"]
+FILEJSON = "bacteria.json"
 DEFAULT_QUERY = "Clostridium Autism"
 DEFAULT_TEXT = "insert your text here"
-DEFAULT_NUMBER_ARTICLES = 5
+DEFAULT_NUMBER_ARTICLES = 10
 DEFAULT_SAVE_PUBMED_ARTICLES = 'bacteria_results.csv'
 DEFAULT_TEXT = "Spinal and bulbar muscular atrophy (SBMA) is an inherited motor neuron disease caused by the expansion of a polyglutamine tract within the androgen receptor (AR). SBMA can be caused by this easily."
 HTML_WRAPPER = """<div style="overflow-x: auto; border: 1px solid #e6e9ef; border-radius: 0.25rem; padding: 1rem; margin-bottom: 2.5rem">{}</div>"""
@@ -143,7 +146,9 @@ def render(text, df, index_article):
 
     df1 = df1.to_frame().reset_index()
     dfStyler = df1.style.set_properties(**{'text-align': 'left'})
-    #df1 = df[['pubmed_id', 'title', 'journal','doi']]
+    
+    info_paper = df1.to_string()
+
     dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
     
     st.markdown("Best match of your query from PUBMED.")
@@ -312,7 +317,7 @@ def return_information(tokens):
 
 ##########################################################################################################
 
-def render_less(text):
+def render_less(text, info):
     #use index article to retrieve document information
     st.write(text)
     
@@ -321,24 +326,24 @@ def render_less(text):
 
     data_bacteria = []
 
-#############################################################################################
-
     st.header("Bacteria information - Taxonomy, Diet and abundance")
     other_infos = return_information(tokens)
     #attrs = ["text", "Definition"]
-    attrs3 = ["Percentage", "term", "sentence"]
-
-    #attrs = ["text", "Canonical Name", "Definition", "Concept ID"]
-    df = pd.DataFrame(other_infos, columns=attrs3)
+    attrs3 = ["Percentage/Bacteria", "Term/Taxonomy", "Sentence"]
+    df3 = pd.DataFrame(other_infos, columns=attrs3)
     #df3 = df.drop_duplicates(subset=['text'])
-
+    df3["Paper"] = info
     #print(data_bacteria)
 
-    dfStyler = df.style.set_properties(**{'text-align': 'left'})
+    dfStyler = df3.style.set_properties(**{'text-align': 'left'})
     dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
     st.table(dfStyler)
 
+    result = df3.to_json(orient="index")
     
+    with open(FILEJSON, 'a+') as json_file:
+        json.dump(result, json_file)
+
 
 ##########################################################################################################
 
@@ -361,6 +366,11 @@ if __name__ == "__main__":
     linker = load_linker_er()
     linker_ner = load_linker_ner()
 
+    try:
+        os.remove(FILEJSON)
+    except OSError:
+        pass
+
     st.sidebar.header("Entity Linking")
     threshold = st.sidebar.slider("Mention Threshold", 0.0, 1.0, 0.95)
     linker_ner.threshold = threshold
@@ -379,9 +389,12 @@ if __name__ == "__main__":
         for index in range(0, DEFAULT_NUMBER_ARTICLES):   
             try:
                 text = str(df['abstract'][index])
+                df1 = df.iloc[index , [0, 1, 3]]
+                #info_paper = df1.to_string()
+                info_paper = str(df1.to_dict())
                 if text != 'nan':
                     #render(text, df, index)
-                    render_less(text)
+                    render_less(text, info_paper)
                     #render(query)
             except:
                 pass

@@ -11,9 +11,11 @@ from termcolor import colored
 from scispacy.linking import EntityLinker
 #from scispacy.umls_linking import UmlsEntityLinker
 from scispacy.abbreviation import AbbreviationDetector
-
+import json
+import os
 
 SPACY_MODEL_NAMES = ["en_core_sci_lg"]
+FILEJSON = "gene.json"
 NER_MODEL_NAMES = ["en_ner_bionlp13cg_md"]
 DEFAULT_QUERY = "ACE2 mutations"
 DEFAULT_NUMBER_ARTICLES = 10
@@ -80,18 +82,21 @@ def render(df, index_article):
     #use index article to retrieve document information
 
     #df1 = df.iloc[index_article , [0, 1, 3, 9, 10] ]
-    df1 = df.iloc[index_article , [0, 1, 2, 3, 4] ]
+    
+    df1 = df.iloc[index_article , [0, 1, 3]]
     pmid = str(df['pubmed_id'][index_article])
     text = str(df['abstract'][index_article])
-    df1 = df1.to_frame().reset_index()
-    dfStyler = df1.style.set_properties(**{'text-align': 'left'})
+
+    #info_paper = df1.to_string()
+    info_paper = str(df1.to_dict())
+
+    #df1 = df1.to_frame().reset_index()
+    #dfStyler = df1.style.set_properties(**{'text-align': 'left'})
     #df1 = df[['pubmed_id', 'title', 'journal','doi']]
-    dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
+    #dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
 
     doc = process_text(spacy_model, text)
     st.markdown("Best match of your query from PUBMED.")
-    #st.table(dfStyler)
-    #st.write(text)
     st.header("Symptoms/Phenotypes")
 
     #tokenize abstract into sentences 
@@ -107,20 +112,18 @@ def render(df, index_article):
             sentences = return_sentence_hightlight(tokens, searchterm)
             data.append([
                 ent.text,
-                kb_entity.definition,
-                sentences
-
+                sentences, 
+                info_paper
             ])
             if show_only_top:
                 break
 
-    attrs = ["text", "Definition", "Sentence matching"]
+    attrs = ["text", "Sentence matching", "Paper"]
     df = pd.DataFrame(data, columns=attrs)
     df = df.drop_duplicates()
     dfStyler = df.style.set_properties(**{'text-align': 'left'})
     dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
     st.table(dfStyler)
-    st.write(text)
 
     st.header("Variants/Mutations")
 
@@ -141,24 +144,33 @@ def render(df, index_article):
             #st.write("Line {}: {}".format(cnt, line))
         for l in fp:
             line = l.strip().split("\t")
-    data = []
+    data2 = []
     mutations = line[1:]
     for mut in mutations:
         mut = mut.strip()
         searchterm = mut
         sentences = return_sentence_hightlight(tokens, searchterm)
-        data.append([
+        data2.append([
             mut,
-            sentences
-
+            sentences,
+            info_paper
         ])
 
-    attrs = ["text", "Sentence matching"]
-    df = pd.DataFrame(data, columns=attrs)
-    df = df.drop_duplicates()
-    dfStyler = df.style.set_properties(**{'text-align': 'left'})
+    attrs = ["text", "Sentence matching", "Paper"]
+    df2 = pd.DataFrame(data2, columns=attrs)
+    df2 = df2.drop_duplicates()
+    dfStyler = df2.style.set_properties(**{'text-align': 'left'})
     dfStyler.set_table_styles([dict(selector='th', props=[('text-align', 'left')])])
     st.table(dfStyler)
+
+    frames = [df, df2]
+    result = pd.concat(frames, ignore_index=True)
+
+    print(result)
+    result = result.to_json(orient="index")
+    
+    with open(FILEJSON, 'a+') as json_file:
+        json.dump(result, json_file)
 ##########################################################################################################
 
 st.title("Scispacy - Demo")
@@ -186,6 +198,12 @@ show_only_top = st.sidebar.checkbox("Show only top entity per mention", value=Tr
 
 try: os.remove("prova2.txt.mf")
 except: pass
+
+try:
+    os.remove(FILEJSON)
+except OSError:
+    pass
+
 st.header("Enter a query term:")
 query = st.text_area("", DEFAULT_QUERY)
 df = reqpubmed.search_pubmed(query, DEFAULT_SAVE_PUBMED_ARTICLES, DEFAULT_NUMBER_ARTICLES)
