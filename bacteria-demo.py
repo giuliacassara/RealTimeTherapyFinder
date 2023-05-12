@@ -181,8 +181,6 @@ def render(text):
 if __name__ == "__main__":
 
     st.title("Bacteria - Demo")
-    st.image("https://www.genomeup.com/wp-content/uploads/2018/04/logo_TM.png")
-
     st.sidebar.markdown(
         """
     Analyze text with [ScispaCy](https://allenai.github.io/scispacy/) to find Bacteria information
